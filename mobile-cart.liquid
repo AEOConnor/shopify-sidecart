@@ -1,0 +1,1123 @@
+{% comment %}
+/* ============================================== */
+/* ================ AJAX CART ================ */
+/* ============================================== */
+{% endcomment %}
+
+
+{% comment %} {% include 'timber-cart' %} {% endcomment %}
+{% comment %} {% include 'ajax-cart-template' %} {% endcomment %}
+<style>
+  .ajaxcart .display-table {
+    clear: both;
+    margin-left: 3px;
+  }
+
+  #cart {
+    position: fixed;
+    overflow-x: hidden;
+    top: 0px;
+    height: 100vh;
+    left: 100%;
+    width: 100%;
+    transition: all 0.25s ease-in-out;
+  }
+
+  .drawer-open {
+    overflow-y: hidden;
+  }
+
+  .drawer-open #cart {
+    right: 0;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    height: 100vh;
+    z-index: 1000000;
+    position: fixed;
+  }
+
+  .drawer-open #cart #cart-container.empty-cart,
+  .drawer-open #cart #cart-container.error-cart {
+    overflow-y: hidden;
+    height: 100vh;
+  }
+
+  #cart::before {
+    visibility: hidden;
+    opacity: 0;
+    content: '';
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 8;
+    transition: all 0.45s cubic-bezier(0.29, 0.63, 0.44, 1);
+  }
+
+  .drawer-open #cart::before {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  #cart-container {
+    background: #FFF;
+    width: 396px;
+    float: right;
+    z-index: 10;
+    position: absolute;
+    right: -396px;
+    transition: all .025s ease;
+    min-height: 100%;
+  }
+
+  .cart-items {
+    padding: 0px 20px 0 20px;
+    transition: all 1s ease;
+    position: relative;
+    margin-top: 20px;
+  }
+
+  .cart-items.variants:after,
+  .cart-cross-sell.variants:after {
+    content: '';
+    opacity: 1;
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.5);
+    z-index: 8;
+    transition: all 0.45s cubic-bezier(0.29, 0.63, 0.44, 1);
+  }
+
+  .cart-close img {
+    transition: all .25s ease;
+  }
+
+  .cart-header {
+    background: #C40058;
+    color: #fff;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .shopping-cart-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .shipping-notice-message {
+    background: #F6F6F4;
+    margin-top: 0px;
+  }
+
+  .shipping-notice-message p {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .isDisabled .cart-updating-message {
+    opacity: 1;
+    z-index: 100;
+    top: 23%;
+    width: 100%;
+  }
+
+  .sp {
+    width: 48px;
+    height: 48px;
+    clear: both;
+    margin: 20px auto;
+  }
+
+  .sp-circle {
+    border: 2px rgba(0, 0, 0, 0.25) solid;
+    border-top: 2px #c40058 solid;
+    border-radius: 50%;
+    -webkit-animation: spCircRot .6s infinite linear;
+    animation: spCircRot .6s infinite linear;
+  }
+
+  @-webkit-keyframes spCircRot {
+    from {
+      -webkit-transform: rotate(0deg);
+    }
+
+    to {
+      -webkit-transform: rotate(359deg);
+    }
+  }
+
+  @keyframes spCircRot {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(359deg);
+    }
+  }
+
+  .rubine-checkmark {
+    height: 32px;
+    width: 32px;
+    left: 46%;
+    top: 9px;
+
+  }
+
+  .cart-item {
+    position: relative;
+    border: .5px solid #E5E5E0;
+    padding-top: 10px;
+    margin-bottom: 20px;
+  }
+
+  a.cart-item-title {
+    padding-left: 10px;
+  }
+
+  a.cross-sell-title {
+    padding-right: 10px;
+  }
+
+  a.cart-item-title::after,
+  a.cross-sell-title:after {
+    content: "";
+    position: absolute;
+    bottom: 1px;
+    left: 0;
+    width: 0px;
+    transition: all 0.25s ease-in-out;
+    transition-duration: 0.5s;
+    height: 2px;
+    margin: 1px 0 0;
+    opacity: 0;
+    background-image: linear-gradient(to right, #C40058 0, #C40058 100%);
+    margin-left: 10px;
+  }
+
+  a.cross-sell-title:before,
+  a.cross-sell-title:after {
+    bottom: -2px;
+  }
+
+  a.cross-sell-title:before,
+  a.cross-sell-title:after {
+    margin-left: 0;
+  }
+
+  a.cart-item-title:hover::after,
+  a.cross-sell-title:hover::before,
+  a.cross-sell-title:hover::after {
+    left: 0;
+    width: calc(100% - 10px);
+    opacity: 1;
+  }
+
+  .cart-item-content {
+    padding: 10px 20px 5px 20px;
+  }
+
+  .cart-item-content>div,
+    {
+    display: flex;
+  }
+
+  .cart-item-image {
+    flex: 1 1 30%;
+  }
+
+  .cart-item-image img {
+    width: 85px;
+    height: 75px;
+  }
+
+  .cart-item-details,
+  .cart-item-price {
+    flex: 1 1 32%;
+  }
+
+  .cart-item-org-price {
+    position: absolute !important;
+    top: 25px;
+    right: 0px;
+  }
+
+  .cart-item-sale-price {
+    right: 0px;
+  }
+
+  .cart-item-swatch.sale-item {
+    top: 40px;
+  }
+
+  .cart-item-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    position: absolute;
+    top: 25px;
+    right: 0px;
+    border: 1px solid #E5E5E0;
+  }
+
+  .cart-item-sale {
+    align-items: center;
+    letter-spacing: 0.5;
+  }
+
+  .cart-item-sale span:first-of-type {
+    padding: 0 5px;
+  }
+
+  .cart-item-sale img {
+    width: 12px;
+    height: 12px;
+  }
+
+  .transition-025s {
+    transition: all 0.25s ease-in-out;
+  }
+
+  .bg-gravy-invert-white:hover:enabled {
+    background: #243746;
+    color: #fff;
+  }
+
+  .bg-hollow-invert-rubine:hover {
+    fill: #C40058;
+    color: #fff;
+  }
+
+  .bg-gravy-invert-white:hover:enabled .stroke-gravy-invert-white,
+  .bg-hollow-invert-rubine:hover .stroke-rubine-invert-white {
+    stroke: #FFF;
+  }
+
+  .cart-item-price,
+  .cart-cross-sell-price {
+    align-items: baseline;
+    align-content: flex-end;
+    position: relative;
+  }
+
+  .cart-item-sizing {
+    display: none;
+    position: absolute;
+    border: .5px solid #E5E5E0;
+    border-top: .5px solid transparent;
+    border-left: .5px solid transparent;
+    bottom: 0px;
+    top: 0;
+    height: auto;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 15px 10px;
+  }
+
+  .cart-item-sizing li {
+    display: flex;
+    padding: 0;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex: 1 1 30%;
+    margin: 2px;
+    border: 2px solid #243746;
+    cursor: pointer;
+    transition: color .25s ease-in-out;
+  }
+
+  .cart-item-sizing li a {
+    padding: 10px;
+  }
+
+  .cart-item-sizing li.isDisabled,
+  .cart-item-sizing li.isDisabled:hover {
+    pointer-events: none;
+    background: #fff;
+    color: #243746;
+    border: 2px solid rgba(36, 55, 70, 0.6);
+  }
+
+  .cart-item-sizing li:hover a {
+    color: #fff;
+  }
+
+  .cart-item-sizing a:hover,
+  .cart-item-sizing a:focus {
+    opacity: 1;
+  }
+
+  .close-cart-sizing {
+    position: absolute;
+    right: 0px;
+    top: 4px;
+    cursor: pointer;
+  }
+
+  .cart-item-actions button,
+  .cart-cross-sell-item-add button {
+    line-height: .5;
+    height: 48px;
+  }
+
+  .cart-cross-sell-item-add button {
+    background: transparent;
+  }
+
+  .cart-cross-sell-item-add button,
+  .close-cart-sizing {
+    border: none;
+  }
+
+  .cart-item-actions>* {
+    border: .5px solid #E5E5E0;
+    padding: 10px 5px;
+  }
+
+  .cart-item-actions button:first-of-type {
+    padding: 0;
+    opacity: 1;
+    transition: opacity .25s ease;
+  }
+
+  .cart-item-actions .border-right-transparent {
+    border-right: transparent;
+  }
+
+  .cart-item-actions .border-left-transparent {
+    border-left: transparent;
+  }
+
+  .cart-item-actions span {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+  }
+
+  .cart-item-actions button:disabled>svg,
+  .cart-item-sizing li .isDisabled,
+  .isDisabled>* {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+
+  .cart-cross-sell-title {
+    background: #E5E5E0;
+    padding: 10px 20px;
+  }
+
+  .cart-cross-sell-items>ul {
+    overflow-x: hidden;
+  }
+
+  .cart-cross-sell-items li {
+    background: #F6F6F4;
+    align-items: center;
+  }
+
+  .cart-cross-sell-item-image img {
+    width: 78px;
+  }
+
+  .cart-cross-sell-items li:nth-of-type(2) {
+    margin: 3px 0;
+  }
+
+  .cart-cross-sell-items li>div {
+    display: inline-block;
+    padding-top: 15px;
+    padding-bottom: 15px;
+  }
+
+  .cart-cross-sell-item-image {
+    flex: 1 1 12%;
+    position: relative;
+    left: 0;
+    height: 100%;
+    z-index: 8;
+  }
+
+  .cart-cross-sell-item-details {
+    flex: 1 1 40%;
+  }
+
+  .cross-sell-sale-tag-container {
+    position: relative;
+  }
+
+  .cross-sell-sale-tag-container:before {
+      {
+      % if request.locale.iso_code=='fr'%
+    }
+
+    content: 'VENTE';
+
+      {
+      % else %
+    }
+
+    content: 'SALE';
+
+      {
+      % endif %
+    }
+
+    position: absolute;
+    top: 0px;
+    left: 10px;
+    z-index: 1;
+    color: #243746;
+    font-family: 'CalibreWeb-Semibold',
+    'Helvetica',
+    sans-serif;
+    font-size: 0.75rem;
+  }
+
+  .cross-sell-sale-tag-container.bogo:before {
+      {
+      % if request.locale.iso_code=='fr'%
+    }
+
+    content: 'PROMO';
+
+      {
+      % else %
+    }
+
+    content: 'FREE';
+
+      {
+      % endif %
+    }
+  }
+
+
+  .limit-gift-text {
+    bottom: -50px;
+  }
+
+  .cross-sell-sale-tag-container:after {
+    position: absolute;
+    content: '';
+    background-color: #C5DCE8;
+    left: 0px;
+    width: 60px;
+    height: 30px;
+    border-radius: 0 0 30px 0;
+    top: 0px;
+  }
+
+  .cart-cross-sell-sale-reg-price {
+    padding-left: 10px;
+  }
+
+  .cart-cross-sell-item-add {
+    flex: 1 1 1%;
+  }
+
+  .cart-totals,
+  .cart-footer {
+    padding: 0 20px 20px 20px;
+  }
+
+  .cart-total-row:first-of-type {
+    border-top: 2px solid #243746;
+    padding-top: 16px;
+  }
+
+  .cart-total-row {
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .cart-checkout-button {
+    width: 100%;
+    display: block;
+  }
+
+  .cart-checkout-button:last-of-type {
+    margin-top: 16px;
+  }
+
+  .cart-footer p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .empty-cart {
+    height: 100vh;
+  }
+
+  .empty-cart-suggestions,
+  .error-cart-state {
+    padding: 0 20px;
+  }
+
+  .error-cart-state {
+    padding-top: 1.5rem;
+  }
+
+  .empty-cart-suggestions a {
+    top: 15px;
+    left: 0px;
+  }
+
+  .empty-cart-item.flex-100 {
+    padding-bottom: 10px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 100%;
+    height: auto;
+    width: auto;
+  }
+
+  .empty-cart-item.flex-50 {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 100%;
+    height: auto;
+    width: auto;
+  }
+
+  .empty-cart-item.flex-50:nth-of-type(2) {
+    padding-right: 5px;
+  }
+
+  .empty-cart-suggestions a.cart-item-title {
+    padding-left: 10px;
+  }
+
+  .empty-cart-item.flex-50:nth-of-type(3) {
+    padding-left: 5px;
+  }
+
+  @media(max-width: 768px) {
+    #cart-container {
+      width: 354px;
+    }
+
+    .cart-item-swatch {
+      top: 20px;
+      right: 10px;
+    }
+
+    .cart-item-details,
+    .cart-item-price {
+      flex: 1 1 27%;
+    }
+
+    .cross-sell-sale-tag-container:before {
+      top: 1px
+    }
+  }
+
+  @media(max-width: 500px) {
+    a.cart-item-title {
+      padding-left: 10px;
+    }
+  }
+
+  @media(max-width: 400px) {
+
+    .drawer-open #cart #cart-container.empty-cart,
+    .drawer-open #cart #cart-container.error-cart {
+      overflow-y: auto;
+    }
+  }
+
+  @media(max-width: 354px) {
+    #cart-container {
+      width: 320px;
+    }
+
+    .cart-item-details,
+    .cart-item-price {
+      flex: 1 1 18%;
+    }
+  }
+</style>
+{% raw %}
+<div id="cart" style="overflow-x:hidden">
+  <div id="cart-container" :class="[(updating ? 'isDisabled' : ''),(number_of_products === 0 ? 'empty-cart' : ''),(error ? 'error-cart' : '' ) ]">
+    <div class="cart-header">
+      <div class="cart-title margin-bottom-zero flex-1">
+        <h4 class="utopia-semibold margin-bottom-zero">
+          <span>
+            {%endraw%} {% if request.locale.iso_code == 'fr' %}
+            Votre panier - {% else %} Your Cart
+            {% endif %}{%raw%} <span v-if='!error'>- {{number_of_products}}</span>
+            <span v-if="number_of_products === 1 && !error">
+              {%endraw%} {% if request.locale.iso_code == 'fr' %}
+              article {% else %} Item
+              {% endif %}{%raw%}
+            </span>
+            <span v-if="number_of_products > 1 || number_of_products === 0 && !error">
+              {%endraw%} {% if request.locale.iso_code == 'fr' %}
+              articles {% else %} Items
+              {% endif %}{%raw%}
+            </span>
+        </h4>
+      </div>
+      <a class="cart-close flex-1" v-on:click="toggleCart()">
+        <img src="{% endraw %}{{ 'close_circle_48x48_white_hollow.svg' | asset_url }}{% raw %}" aria-label="Close cart."
+          class="shopping-cart-icon" alt="Close shopping cart.">
+      </a>
+    </div>
+    <div class="shipping-notice-message">
+      <p class="small flex-container top-xs bottom-s">{%endraw%} {% if request.locale.iso_code == 'fr' %}
+        Les commandes quittent généralement l’entrepôt sous 1 à 2 jours ouvrables. {% else %} Orders typically ship
+        from our warehouse in 1-2 business days.
+        {% endif %}{%raw%} </p>
+    </div>
+    <transition @enter="svgDraw('#checkmark-path')" :css="false">
+      <div v-if="updating" class="cart-updating-message position-absolute">
+        <div id="loader" class="position-relative">
+          <div class="sp sp-circle"></div>
+
+          <svg width="32px" height="32px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink" class="position-absolute rubine-checkmark" aria-labelledby="rubine-checkmark-title rubine-checkmark-desc">
+            <title id="rubine-checkmark-title">Rubine checkmark.</title>
+            <desc id="rubine-checkmark-desc">Your cart has been updated.</desc>
+            <g id="check-mark-16x16" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline id="checkmark-path" stroke="#C40058" stroke-width="2" points="13 4.5 6.5 11.5 3 8.5" class="rubine-checkmark position-absolute"></polyline>
+            </g>
+          </svg>
+
+        </div>
+        <p id="update-cart-text" class="text-center gravy-text">We're updating your cart!</p>
+      </div>
+    </transition>
+    <div v-if='error' class="text-center flex-container flex-column error-cart-state top-l">
+      <h5 class="calibre-semibold"> {%endraw%} {% if request.locale.iso_code == 'fr' %}
+        Oops, il y a un petit problème. {% else %} Oops, something went wrong.
+        {% endif %}{%raw%} </h5>
+      <img src="{% endraw %}{{ 'sad-cart-face-64x64.svg'  | asset_url }}{% raw %}" alt="Oops! Something went wrong."
+        aria-hidden='true' class="bottom-l" style="width: 64">
+      <button class="btn btn--rubine uppercase calibre-semibold" v-on:click='getCart()'> {%endraw%} {% if
+        request.locale.iso_code == 'fr' %}
+        Actualiser {% else %}Reload cart
+        {% endif %}{%raw%} </button>
+    </div>
+    <div v-if="number_of_products === 0 && !error" class="text-center empty-cart top-l">
+      <h5 class="calibre-semibold"> {%endraw%} {% if request.locale.iso_code == 'fr' %}
+        Votre panier a l’air plutôt vide. {% else %} Your cart is empty.
+        {% endif %}{%raw%}</h5>
+      <img src="{% endraw %}{{ 'empty-cart-face-64x64.svg'  | asset_url }}{% raw %}" alt="Empty shopping cart." style="width: 64">
+      <p>{%endraw%} {% if request.locale.iso_code == 'fr' %}
+        C’est l’heure de le remplir. {% else %}Let's change that.
+        {% endif %}{%raw%} <br>{%endraw%} {% if request.locale.iso_code == 'fr' %}
+        Voici quelques idées: {% else %} Start here:
+        {% endif %}{%raw%} </p>
+      <div class="empty-cart-suggestions">
+        <div class="flex-container">
+          <div v-for="item in emptyCartProducts" :class="item.product_handle == '/products/mattresses' ? 'flex-100 flex' : 'flex flex-50'"
+            class='position-relative empty-cart-item'>
+            <a :href="item.product_handle" class="calibre-semibold cart-item-title no-opacity-hover transition-025s position-absolute">{{
+              item.product_title }}</a>
+            <a :href="item.product_handle" class="no-opacity-hover">
+              <img :src="item.product_img" :alt="item.product_title" :class="item.product_handle == '/products/mattresses' ? 'display-block' : 'null' ">
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if='!error' class="cart-items">
+      <transition-group name='cart-items' tag='ul'>
+        <li v-for="product in products" v-if='product.data.id' v-bind:key='product.data.id' class="flex-container cart-item"
+          :id="('id-'+product.data.id)">
+          <a class="calibre-semibold p gravy-text cart-item-title no-opacity-hover margin-bottom-zero transition-025s position-relative"
+            v-bind:href="product.data.url">{{ product.data.product_title }}</a>
+          <div class="cart-item-content flex flex-100 flex-container">
+            <div class="cart-item-image ">
+              <a v-bind:href="product.data.url" class="no-opacity-hover">
+                <img :src="product.featured_image" :alt="product.data.title" />
+              </a>
+            </div>
+            <div class="cart-item-details">
+              <p class="small margin-bottom-zero titlecase">{{ product.data.variant_options[0] }}</p>
+              <p v-if="product.data.variant_options[1]" class="small titlecase flex-container margin-bottom-zero">{{
+                product.data.variant_options[1] }} </p>
+              <div v-if="product.discount" class="cart-item-sale micro flex-container position-absolute">
+                <img v-if="product.discount_label !== 'BOGO'" src="{% endraw %}{{ 'price-tag.svg' | asset_url }}{% raw %}"
+                  alt="Sale on product.data.title." />
+                <img v-if="product.discount_label == 'BOGO'" src="{% endraw %}{{ 'gift-box-16x16.svg' | asset_url }}{% raw %}"
+                  alt="Sale on product.data.title." />
+                <span v-if="product.discount_label !== 'BOGO'" class='uppercase rubine-text calibre-semibold'>
+                  {%endraw%} {% if request.locale.iso_code == 'fr' %}
+                  Vente: {% else %} Sale:
+                  {% endif %}{%raw%}
+                </span>
+                <span v-if="product.discount_label !== 'BOGO'" class="rubine-text uppercase">{{ product.discount_label
+                  }}</span>
+                <span v-if="product.discount_label == 'BOGO'" class="rubine-text calibre-semibold uppercase ">{%endraw%}
+                  {% if request.locale.iso_code == 'fr' %}
+                  Gratuite {% else %} Free with mattress
+                  {% endif %}{%raw%}</span>
+                <span v-if="product.discount_label == 'BOGO' && product.data.quantity > 1" class="light-grey-text micro position-absolute limit-gift-text">{%endraw%}
+                  {% if request.locale.iso_code == 'fr' %}
+                  Limite: 1 produit gratuit par commande {% else %} Limit: 1 free product per order
+                  {% endif %}{%raw%}</span>
+              </div>
+            </div>
+            <div class="cart-item-price text-right flex-container flex-column">
+              <p class="calibre-semibold small position-absolute cart-item-sale-price flex flex-1 margin-bottom-zero">{{
+                formatPrice(product.data.final_line_price) }}</p>
+              <p v-if="product.discount" class="micro light-grey-text strike-throught flex flex-1 cart-item-org-price">{{
+                formatPrice(product.data.original_line_price) }}</p>
+            </div>
+          </div>
+          <div class="cart-item-actions  flex flex-100 flex-container">
+            <button id='trash-button' class="flex flex-1 border-right-transparent border-left-transparent transition-025s bg-gravy-invert-white white-bg"
+              v-if='!product.trashWarning' v-on:click="trashWarning(product.data.id, product.trashWarning)">
+              <svg width="48px" height="48px" viewBox="0 0 48 48" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="trash-can-gravy-title trash-can-gravy-desc">
+                <title id="trash-can-gravy-title">Remove item from cart.</title>
+                <desc id="trash-can-gravy-desc">Click item to remove it from cart.</desc>
+                <g id="trash-can-circle" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                  <g id="48x48-circle" transform="translate(9.000000, 8.500000)" stroke="#243746" class="stroke-gravy-invert-white"
+                    stroke-width="2">
+                    <circle id="Oval" cx="15" cy="15.4466257" r="15"></circle>
+                  </g>
+                  <g id="trash-can" transform="translate(16.000000, 16.000000)" stroke="#243746" stroke-linecap="round"
+                    stroke-width="2" class="stroke-gravy-invert-white">
+                    <path d="M1.58333333,4.99310092 L14.4166667,4.99310092" id="Path-7"></path>
+                    <path d="M3.24236823,4.99310092 L3.24236823,12.0540587 C3.24236823,13.3427231 4.28703715,14.387392 5.57570157,14.387392 L10.4242984,14.387392 C11.7129628,14.387392 12.7576318,13.3427231 12.7576318,12.0540587 L12.7576318,5.0540587"
+                      id="Path-8" stroke-linejoin="round"></path>
+                    <path d="M5.91690303,4.03561221 C5.75536545,2.42027605 6.48568369,1.61260797 8.10785773,1.61260797 C9.73003177,1.61260797 10.4699141,2.42027605 10.3275047,4.03561221"
+                      id="Path-9" stroke-linejoin="round"></path>
+                    <path d="M6.43174587,7.96070496 L6.43174587,11.460705" id="Path-10"></path>
+                    <path d="M9.56825413,7.96070496 L9.56825413,11.460705" id="Path-10"></path>
+                  </g>
+                </g>
+              </svg>
+            </button>
+            <button id='remove-button' class="flex flex-1 border-right-transparent border-left-transparent uppercase calibre-semibold white-text gravy-bg"
+              v-if="product.trashWarning" v-on:click="removeProduct(0, product.data.id)" style="width:48px;">Remove</button>
+            <button class="flex flex-1 gravy-text calibre-semibold border-right-transparent transition-025s bg-gravy-invert-white white-bg"
+              :disabled="product.decrease_available" v-on:click="changeProductQuantity((product.data.quantity - 1), product.data.id)">
+              <svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" id="plus-icon-gravy" role="img" aria-labelledby="minus-icon-gravy-title minus-icon-gravy-desc">
+                <title id="plus-icon-gravy-title">Decrease product quantity.</title>
+                <desc id="plus-icon-gravy-desc">Click to decrease product quantity.</desc>
+                <g id="minus" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round">
+                  <path d="M13.1293231,8.00423074 L3.13069275,8.00423074" class="stroke-gravy-invert-white" id="Path"
+                    stroke="#243746" stroke-width="2"></path>
+                </g>
+              </svg>
+            </button>
+            <span class="flex flex-1 text-center border-right-transparent">{{ product.data.quantity }}</span>
+            <button class="flex flex-1 gravy-text calibre-semibold transition-025s bg-gravy-invert-white white-bg"
+              v-on:click="changeProductQuantity((product.data.quantity + 1), product.data.id)" :disabled="product.increase_not_available">
+              <svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" id="plus-icon-gravy" role="img" aria-labelledby="plus-icon-gravy-title plus-icon-gravy-desc">
+                <title id="plus-icon-gravy-title">Increase product quantity.</title>
+                <desc id="plus-icon-gravy-desc">Click to increase your quantity.</desc>
+                <g id="plus" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round">
+                  <path d="M8.12189617,3.00021184 L8.12189617,13.0044426" id="Path" stroke="#243746" class="stroke-gravy-invert-white"
+                    stroke-width="2" transform="translate(8.000000, 8.500212) scale(-1, 1) translate(-8.000000, -8.500212) "></path>
+                  <path d="M12.9986304,8.00423074 L3,8.00423074" id="Path" stroke="#243746" class="stroke-gravy-invert-white"
+                    stroke-width="2"></path>
+                </g>
+              </svg>
+            </button>
+            <button v-if="product.variants.length > 1" class="flex flex-1 uppercase gravy-text calibre-semibold transition-025s border-left-transparent bg-gravy-invert-white white-bg"
+              v-on:click="showProductVariants(product.data.id, product.data.variant_title)">Change size</button>
+          </div>
+          <div id='cart-item-sizing' class="cart-item-sizing" :id=" product.data.handle + '-' + product.data.id "
+            :style="product.displayVariants ? {'display': 'block'} : null">
+            <a v-bind:href="product.data.url" class="flex flex-100 calibre-semibold gravy-text cart-item-size-title bottom-l"
+              style="display: block">{{ product.data.product_title }}</a>
+            <button v-on:click="showProductVariants(product.data.id, product.data.variant_title)" :id="('close-cart-sizing-' + product.data.id)"
+              class="close-cart-sizing link-opacity-hover white-bg">
+              <img src="{% endraw %}{{ 'close-circle-gravy-48x48.svg' | asset_url }}{% raw %}" class="close-cart-sizing-img"
+                :id="('close-cart-sizing-' + product.data.id)">
+            </button>
+            <ul v-bind:class="product.variants.length == 2 ? 'flex-column flex-container' : 'flex-container' ">
+              <li v-for="variant in product.variants" v-bind:id="('varr-'+variant.data.id)" v-if="variant.activeSwatch"
+                v-bind:class="[(variant.data.id == product.data.variant_id ? 'gravy-bg white-text uppercase calibre-semibold' : 'gravy-text btn btn--hollow-gravy cart-item-variant uppercase white-bg'), (!variant.data.available ? 'isDisabled' : 'null')]">
+                <a v-on:click="changeProductSize(product.data.id, product.data.quantity, variant.data.id, product.id, product.colour, variant.activeSwatch)"
+                  v-bind:class="variant.data.id == product.data.variant_id ? 'white-text' : 'gravy-text'" v-if="variant.data.available">{{variant.data.option1}}</a>
+                <a class="gravy-text" v-if="!variant.data.available">{{variant.data.option1}}</a>
+              </li>
+      </transition-group>
+    </div>
+    </li>
+    </ul>
+  </div>
+  <div v-if="number_of_products > 0 && !error" :class="allProducts.length > 0 ? 'cart-cross-sell' : 'hidden'">
+    <div class="cart-cross-sell-title">
+      <h5 class="calibre-semibold margin-bottom-zero">
+        {%endraw%}
+        {% if request.locale.iso_code == 'fr' %}
+        Complétez votre ensemble {% else %} Complete your Set
+        {% endif %}
+        {%raw%}
+      </h5>
+    </div>
+    <div class="cart-cross-sell-items">
+      <transition-group name='cross-sell-items' tag='ul'>
+        <li v-for="cross_sell in allProducts.slice(0, 3)" v-bind:key='cross_sell.id' v-bind:id="('cross-sell-'+cross_sell.id )"
+          v-bind:class="[(cross_sell.onSale ? 'cross-sell-sale-tag-container flex-container' : 'flex-container'), (cross_sell.saleType == 'bogo' ? 'bogo' : '')]">
+          <div class="cart-cross-sell-item-image" v-for="variant in cross_sell.variants" v-if="variant.activeVariant">
+            <a v-bind:href="cross_sell.url" class="no-opacity-hover">
+              <img :src="variant.featured_image" :alt="cross_sell.title">
+            </a>
+          </div>
+          <div class="cart-cross-sell-item-details flex-column" v-for="variant in cross_sell.variants" v-if="variant.activeVariant">
+            <a class="calibre-semibold margin-bottom-zero small no-opacity-hover cross-sell-title transition-025s position-relative"
+              v-bind:href="cross_sell.url">{{cross_sell.title }}</a>
+            <div class="flex-container cart-cross-sell-price">
+              <p :class="cross_sell.discount_code == 'bogo' ? 'hidden' : 'margin-bottom-zero calibre-semibold small'">{{
+                formatPrice(variant.data.price) }}</p>
+              <p v-if="variant.data.discount > 0 && cross_sell.discount_code !== 'bogo' " class="margin-bottom-zero small light-grey-text strike-throught cart-cross-sell-sale-reg-price">{{
+                formatPrice(variant.data.discount) }}</p>
+              <p v-if="cross_sell.discount_code == 'bogo'" class="margin-bottom-zero small">{{
+                formatPrice(variant.data.discount) }}</p>
+            </div>
+            <p v-if="cross_sell.discount_code == 'bogo'" class="rubine-text calibre-semibold uppercase micro">{{cross_sell.cartLabel}}</p>
+            <p :class="cross_sell.discount_code == 'bogo' ? 'hidden' : 'margin-bottom-zero small'">{{variant.data.option1
+              }} <span v-if="variant.data.option2 !== null">: {{variant.data.option2}}</span></p>
+          </div>
+          <div class="cart-cross-sell-item-add" v-for="variant in cross_sell.variants" v-if="variant.activeVariant">
+            <button v-on:click="addToCart(1, variant.data.id, cross_sell.id, null, 0)">
+              <svg width="48px" height="48px" viewBox="0 0 48 48" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" rol="img" aria-labelledby="plus-circle-rubine-title plus-circle-rubine-desc">
+                <title id="plus-circle-rubine-title">Add item to cart.</title>
+                <desc id="plus-circle-rubine-desc">Click button to add item to cart.</desc>
+                <g id="plus-circle" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" class="bg-hollow-invert-rubine transition-025s">
+                  <g id="48x48-circle" transform="translate(9.000000, 8.500000)" stroke="#C40058" stroke-width="2"
+                    class="stroke-rubine-invert-white">
+                    <circle id="Oval" cx="15" cy="15.5" r="15"></circle>
+                    <g id="plus" transform="translate(7.000000, 7.500000)" stroke-linecap="round">
+                      <path d="M8.12189617,3.00021184 L8.12189617,13.0044426" id="Path" transform="translate(8.000000, 8.500212) scale(-1, 1) translate(-8.000000, -8.500212) "
+                        class="stroke-rubine-invert-white transition-025s"></path>
+                      <path d="M12.9986304,8.00423074 L3,8.00423074" id="Path" class="stroke-rubine-invert-white transition-025s"></path>
+                    </g>
+                  </g>
+                </g>
+              </svg>
+            </button>
+          </div>
+        </li>
+      </transition-group>
+    </div>
+  </div>
+  <div class="cart-totals" v-if="number_of_products > 0 && !error">
+    <div class="cart-total-row flex-container">
+      <p class="margin-bottom-zero small">{%endraw%} {% if request.locale.iso_code == 'fr' %}
+        Livraison {% else %} Shipping
+        {% endif %}{%raw%}</p>
+      <p class="margin-bottom-zero small"> {%endraw%} {% if request.locale.iso_code == 'fr' %}
+        gratuite{% else %} Free
+        {% endif %}{%raw%} </p>
+    </div>
+    <!-- <div class="cart-total-row" v-if="sale.code"><span>Promo</span><span class="promo-code">{{sale.code}}</span><span>{{ formatPrice(sale.discount_amount) }}</span></div>  -->
+    <div class="cart-total-row flex-container top-m">
+      <p class="calibre-semibold">{%endraw%} {% if request.locale.iso_code == 'fr' %}
+        Sous-total {% else %} Subtotal
+        {% endif %}{%raw%}</p>
+      <p class="h3 calibre-semibold">{{this.totalPrice}}</p>
+    </div>
+    <button v-if="updating" class="btn btn--grey cart-checkout-button uppercase calibre-semibold">Updating Cart...</button>
+    <button v-if=!updating class="btn btn--rubine cart-checkout-button uppercase calibre-semibold" name="checkout" href="/checkout"
+      v-on:click="checkout()">
+      {%endraw%} {% if request.locale.iso_code == 'fr' %}
+      Procéder au paiement{% else %} Checkout
+      {% endif %}{%raw%}
+    </button>
+    <button href="#" v-on:click="toggleCart()" class="btn btn--hollow-rubine cart-checkout-button uppercase calibre-semibold">{%endraw%}
+      {% if request.locale.iso_code == 'fr' %}
+      Retourner{% else %} Continue shopping
+      {% endif %}{%raw%}</button>
+  </div>
+  <div class="cart-footer" v-if="number_of_products > 0 && !error">
+    <p class="margin-bottom-zero small">
+      {%endraw%} {% if request.locale.iso_code == 'fr' %}
+      Veuillez noter: des frais d’expédition supplémentaires peuvent s’appliquer pour les territoires canadiens.{% else
+      %} *Please note: exra shipping charges may apply for the Canadian territories.
+      {% endif %}{%raw%}
+    </p>
+    <p class="small">{%endraw%} {% if request.locale.iso_code == 'fr' %}
+      Sous-total {% else %} Please contact
+      {% endif %}{%raw%} <a href="mailto:hello@endy.com" class="classic-link-rubine-underline calibre-semibold">hello@endy.com</a>
+      or call <a href="tel:1 866 304 3639" class="classic-link-rubine-underline calibre-semibold">1 866 304 3639</a>
+      for inquires.</p>
+  </div>
+</div>
+</div>
+{% endraw %}
+{{ 'vue.min.js' | asset_url | script_tag }}
+<script>
+
+
+  var items = [
+    {% - for item in cart.items -%}
+  {
+    "data": { { item | json } },
+    "id": { { item.product_id } },
+    "rank": { { item.product.metafields.cross_sell.rank | json } },
+    "chosen_variant": { { item.variant.title | json } },
+    {% assign swatch = item.variant.options[1] | downcase | replace: ' ', '-' %}
+    {% if swatch != '' %}
+    {% assign file = item.product.handle | prepend: 'Endy-Side-Cart-' | append: '-' | append: swatch | append: '-85x75-2x.jpg?' %}
+    "featured_image": { { file | file_url | json } },
+    {% else %}
+    {% assign file = item.product.handle | prepend: 'Endy-Side-Cart-' | append: '-85x75-2x.jpg?' %}
+    "featured_image": { { file | file_url | json } },
+    {% endif %}
+    "updating": false,
+      "discount": null,
+        "discount_label": null,
+          'displayVariants': false,
+            "pre_discount_price": null,
+              "decrease_available": ({{ item.quantity }
+  } > 1) ?false : true,
+    "increase_not_available": false,
+      "trashWarning": false,
+        "sizing": null,
+          "sizing_open": false,
+            "swatches": false,
+              "variants": [
+                {% assign variants = all_products[{{ item.product.handle }}] %}
+  {% for variant in variants.variants %}
+  {% assign swatchColour = variant.option2 | downcase | replace: " ", "-" %}
+  {% if swatchColour != '' and swatch == swatchColour %}
+  {
+    "data": { { variant | json } },
+    "rank": { { variant.metafields.cross_sell.rank | json } },
+    "activeSwatch": { { swatchColour | json } }
+  }
+  {% comment %} variant with no swatches {% endcomment %}
+  {% elsif swatchColour == '' %}
+  {
+    "data": { { variant | json } },
+    "rank": { { variant.metafields.cross_sell.rank | json } },
+    "activeSwatch": 'false'
+  }
+  {% else %}
+  {
+    "data": { { variant | json } },
+    "rank": { { variant.metafields.cross_sell.rank | json } },
+    "inactiveSwatch": { { swatchColour | json } }
+  }
+  {% endif %}
+  {% unless forloop.last %}, {% endunless %}
+
+  {% endfor %}
+        ],
+  "cross_sell": [
+    {% assign cross_sell_items = item.product.metafields.cross_sell.products | replace: ' ', '' | split: ',' %}
+    {% for cross_sell in cross_sell_items %}
+  {
+    {% assign product = all_products[{{ cross_sell } }] %}
+  "rank": { { product.metafields.cross_sell.rank | json } },
+  "id": { { product.id } },
+  "product_title": { { product.title | json } },
+  "handle": { { product.handle | json } },
+  "url": { { product.url | json } },
+  {% assign file = product.handle | prepend: 'Endy-Side-Cart-Cross-Sell-' | append: "-78x78-2x.png" %}
+  "featured_image": { { file | file_url | json } },
+  "discount": 0,
+    "discount_label": null,
+      "variants": [
+        {% for variant in product.variants %}
+  {
+    "meta": { { variant.metafields.size | json } },
+    "rank": { { variant.metafields.cross_sell.rank | json } },
+    "data": { { variant | json } },
+    "available": { { variant.available | json } },
+    "price": { { variant.price | json } }
+  } {% unless forloop.last %}, {% endunless %}
+  {% endfor %}
+              ]
+            }{% unless forloop.last %}, {% endunless %}
+  {% endfor %}
+        ]
+      }{% unless forloop.last %}, {% endunless %}
+  {% - endfor -%}
+  ]
+  var productsAll = [
+    {% - for product in collections.productsAll.products -%}
+  {
+    "title": { { product.title | json } },
+    "handle": { { product.handle | json } },
+    "id": { { product.id } },
+    "rank": { { product.metafields.cross_sell.rank | json } },
+    "onSale": false,
+      "variants": [
+        {% for variant in product.variants %}
+  {% assign swatchColour = variant.option2 | downcase | replace: " ", "-" %}
+  {% if swatchColour != '' %}
+  {
+    "data": { { variant | json } },
+    "rank": { { variant.metafields.cross_sell.rank | json } },
+    "activeSwatch": { { swatchColour | json } },
+    "activeVariant": false
+  }
+  {% comment %} variant with no swatches {% endcomment %}
+  {% elsif swatchColour == '' %}
+  {
+    "data": { { variant | json } },
+    "rank": { { variant.metafields.cross_sell.rank | json } },
+    "activeSwatch": 'false',
+      "activeVariant": false
+  }
+  {% endif %}
+  {% unless forloop.last %}, {% endunless %}
+
+  {% endfor %}
+          
+        ]
+      },
+
+  {% - endfor -%}
+]
+  var lang = {% if request.locale.iso_code == 'fr' %}"FR"{% else %} "EN"{% endif %}
+  var file = {{ file | file_url | remove: file | json }}
+  var emptyCartProducts =
+    [
+      {
+        "product_title": "The Endy Mattress",
+        "product_handle": "/products/mattresses",
+        "product_img": "https://cdn.shopify.com/s/files/1/1621/2873/files/Endy-Side-Cart-Empty-mattresses-303x176-2x.jpg?v=1578679740"
+      },
+      {
+        "product_title": "The Endy Bed Frame",
+        "product_handle": "/products/the-endy-bed-frame",
+        "product_img": "https://cdn.shopify.com/s/files/1/1621/2873/files/Endy-Side-Cart-Empty-the-endy-bedframe-148x136-2x.jpg?v=1578679740"
+      },
+      {
+        "product_title": "The Endy Pillow",
+        "product_handle": "/products/pillows",
+        "product_img": "https://cdn.shopify.com/s/files/1/1621/2873/files/Endy-Side-Cart-Empty-pillows-148x136-2x.jpg?v=1578679740"
+      }
+    ]
+</script>
+{{ 'ajax-cart-vue.js' | asset_url | script_tag }}
+
+<script>
+  document.getElementById('cart').addEventListener('click', function (e) {
+    // This makes sure only the background is clicked not any part of the nav
+    if (e.target.id === 'cart') {
+      // THis Function is defined in ajax-cart-vue it just removes a class to hide the nav
+      vue.toggleCart()
+    }
+  })
+</script>
